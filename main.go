@@ -2,64 +2,39 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"log"
-	_ "net/http/pprof"
+	"path"
 	"runtime"
 )
 
-func worker(ch chan struct{}) {
-	<-ch
-	println("roger1")
-	// send a message to the main program
-	close(ch)
+type Uint32Container struct {
+	s []uint32
 }
 
-var intMap map[int]int
-var cnt = 8192
+func NewUint32Container() *Uint32Container {
+	return &Uint32Container{s: []uint32{}}
+}
 
-func initMap() {
-	intMap = make(map[int]int, cnt)
+func (c *Uint32Container) Put(val uint32) {
+	c.s = append(c.s, val)
+}
 
-	for i := 0; i < cnt; i++ {
-		intMap[i] = i
+func (c *Uint32Container) Get() uint32 {
+	r := c.s[0]
+	c.s = c.s[1:]
+	return r
+}
+
+func getInfo(skip int) (funcName, fileName string, lineNo int) {
+	pc, file, lineNo, ok := runtime.Caller(skip)
+	if !ok {
+		fmt.Println("runtime.Caller() failed")
+		return
 	}
+	funcName = runtime.FuncForPC(pc).Name()
+	fileName = path.Base(file) // Base函数返回路径的最后一个元素
+	return
 }
-
-func printMemStats() {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	log.Printf("Alloc = %v, totalAlloc=%v, sys=%v, numGc=%v", m.Alloc, m.TotalAlloc, m.Sys, m.NumGC)
-}
-
-type Q struct {
-	Name string
-}
-
-func (q *Q) sayHello() bool {
-	fmt.Printf("%p\n", q)
-	return q == nil
-}
-
-var datas []string
-
-func Add(str string) string {
-	data := []byte(str)
-	sData := string(data)
-	datas = append(datas, sData)
-	return sData
-}
-
-type DeviceInfo struct{}
 
 func main() {
-	ginEngin := gin.New()
-	ginEngin.GET("/test", func(ctx *gin.Context) {
-		var d *DeviceInfo
-		ctx.Set("__di", d)
-		info, exist := ctx.Get("__di")
-		fmt.Println(info, exist)
-		ctx.JSON(200, map[string]interface{}{"info": info, "exist": exist})
-	})
-	ginEngin.Run("9000")
+
 }
